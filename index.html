@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   
-  <!-- Добавляем Firebase SDK -->
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
@@ -80,6 +80,90 @@
       display: flex;
       align-items: center;
       gap: 12px;
+    }
+    
+    /* Profile Menu */
+    .profile-menu {
+      position: relative;
+      display: inline-block;
+    }
+    
+    .profile-dropdown {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 8px 0;
+      min-width: 180px;
+      box-shadow: var(--shadow);
+      z-index: 1000;
+      display: none;
+    }
+    
+    .profile-dropdown.show {
+      display: block;
+    }
+    
+    .profile-dropdown a {
+      display: block;
+      padding: 8px 16px;
+      color: var(--text);
+      text-decoration: none;
+      transition: var(--transition);
+    }
+    
+    .profile-dropdown a:hover {
+      background: var(--glass);
+    }
+    
+    .profile-dropdown hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 8px 0;
+    }
+    
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--brand);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: var(--bg);
+      margin-right: 8px;
+    }
+    
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 8px;
+    }
+    
+    .edit-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    
+    .item-status {
+      font-size: 0.8rem;
+      padding: 4px 8px;
+      border-radius: 4px;
+      background: var(--glass);
+      display: inline-block;
+      margin-top: 8px;
+    }
+    
+    .item-status.active {
+      background: var(--brand);
+      color: var(--bg);
     }
     
     /* Buttons */
@@ -740,6 +824,7 @@
     .detail-description {
       line-height: 1.6;
       margin-bottom: 24px;
+      white-space: pre-line;
     }
     .detail-actions {
       display: flex;
@@ -833,6 +918,9 @@
       .stats {
         flex-direction: column;
       }
+      .profile-dropdown {
+        right: -50px;
+      }
     }
     
     /* Loading animation */
@@ -870,7 +958,26 @@
         </button>
         <div class="user-menu">
           <button class="btn btn-ghost" id="showFavorites">❤️ Обране</button>
-          <button class="btn btn-ghost" id="showAuth">👤 Увійти</button>
+          <div class="profile-menu">
+            <button class="btn btn-ghost" id="profileButton">
+              <span class="user-avatar" id="userAvatar">👤</span>
+              <span id="userName">Увійти</span>
+            </button>
+            <div class="profile-dropdown" id="profileDropdown">
+              <div class="user-info">
+                <div class="user-avatar" id="dropdownAvatar">👤</div>
+                <div>
+                  <div id="dropdownUserName">Гість</div>
+                  <small id="dropdownUserEmail"></small>
+                </div>
+              </div>
+              <a href="#" id="myItemsLink"><i class="fas fa-list"></i> Мої товари</a>
+              <a href="#" id="profileSettings"><i class="fas fa-cog"></i> Налаштування</a>
+              <hr>
+              <a href="#" id="logoutBtn" style="display: none;"><i class="fas fa-sign-out-alt"></i> Вийти</a>
+              <a href="#" id="loginBtn"><i class="fas fa-sign-in-alt"></i> Увійти</a>
+            </div>
+          </div>
           <button class="btn btn-primary" id="openAdd">+ Додати товар</button>
         </div>
       </div>
@@ -1102,7 +1209,7 @@
   <!-- Modals -->
   <dialog id="addModal">
     <div class="modal-header">
-      <h2>Додати еко-товар</h2>
+      <h2 id="addModalTitle">Додати еко-товар</h2>
       <button class="close-btn" id="closeAdd">&times;</button>
     </div>
     <div class="modal-body">
@@ -1308,15 +1415,58 @@
             <button class="btn btn-ghost" id="detailFavorite">
               <i class="far fa-heart"></i> В обране
             </button>
-            <button class="btn btn-primary">
+            <button class="btn btn-primary" id="detailMessage">
               <i class="fas fa-envelope"></i> Написати
             </button>
-            <button class="btn btn-primary">
+            <button class="btn btn-primary" id="detailPhone">
               <i class="fas fa-phone"></i> Подзвонити
             </button>
           </div>
         </div>
       </div>
+    </div>
+  </dialog>
+
+  <!-- New Modals from the second file -->
+  <dialog id="profileModal">
+    <div class="modal-header">
+      <h2>Мій профіль</h2>
+      <button class="close-btn" id="closeProfile">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="profileName">Ім'я</label>
+        <input type="text" id="profileName" placeholder="Ваше ім'я">
+      </div>
+      
+      <div class="form-group">
+        <label for="profileEmail">Email</label>
+        <input type="email" id="profileEmail" placeholder="your@email.com" disabled>
+      </div>
+      
+      <div class="form-group">
+        <label for="profilePhone">Телефон</label>
+        <input type="tel" id="profilePhone" placeholder="+380 (XX) XXX-XX-XX">
+      </div>
+      
+      <div class="form-group">
+        <label for="profileLocation">Місцезнаходження</label>
+        <input type="text" id="profileLocation" placeholder="Область, місто">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancelProfile">Скасувати</button>
+      <button class="btn btn-primary" id="saveProfile">Зберегти</button>
+    </div>
+  </dialog>
+
+  <dialog id="myItemsModal">
+    <div class="modal-header">
+      <h2>Мої товари</h2>
+      <button class="close-btn" id="closeMyItems">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="userItemsList" class="listings-grid"></div>
     </div>
   </dialog>
 
@@ -1326,24 +1476,48 @@
   <script>
     // === FIREBASE CONFIGURATION ===
     const firebaseConfig = {
-  apiKey: "AIzaSyDY2zg0HUVaKEGBsHj_bTNHBL4UzACHA1U",
-  authDomain: "natures-legacy.firebaseapp.com",
-  projectId: "natures-legacy",
-  storageBucket: "natures-legacy.firebasestorage.app",
-  messagingSenderId: "261094882638",
-  appId: "1:261094882638:web:8db6af461d4394deca321f"
-};
+      apiKey: "AIzaSyDY2zg0HUVaKEGBsHj_bTNHBL4UzACHA1U",
+      authDomain: "natures-legacy.firebaseapp.com",
+      projectId: "natures-legacy",
+      storageBucket: "natures-legacy.firebasestorage.app",
+      messagingSenderId: "261094882638",
+      appId: "1:261094882638:web:8db6af461d4394deca321f"
+    };
     
     // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     const auth = firebase.auth();
     
+    // === CLOUDINARY CONFIGURATION ===
+    const cloudName = "dhfkb6xv2";
+    const uploadPreset = "unsigned_preset";
+    
+    // === UTILITIES ===
+    const $ = (s, root=document) => root.querySelector(s);
+    const $$ = (s, root=document) => Array.from(root.querySelectorAll(s));
+    
+    const favoritesKey = 'natureslegacy:favorites:v1';
+    const userKey = 'natureslegacy:user:v1';
+    
+    const state = {
+      items: [],
+      favorites: [],
+      user: null,
+      userProfile: null,
+      filter: { q:'', cat:'', sort:'new', priceMin:0, priceMax:100000, location:'', condition:'' },
+      currentView: 'list',
+      map: null,
+      markers: [],
+      currentTheme: 'dark',
+      editingItem: null,
+      userItems: [],
+      unsubscribe: null,
+      currentItem: null
+    };
+
     // === CLOUDINARY IMAGE UPLOAD ===
     async function uploadImage(file) {
-      const cloudName = "dhfkb6xv2";
-      const uploadPreset = "unsigned_preset";
-      
       const formData = new FormData();
       formData.append("file", file);
       formData.append("upload_preset", uploadPreset);
@@ -1362,27 +1536,6 @@
         throw error;
       }
     }
-
-    // === UTILITIES ===
-    const $ = (s, root=document) => root.querySelector(s);
-    const $$ = (s, root=document) => Array.from(root.querySelectorAll(s));
-    
-    // Ключи для localStorage теперь используются только для тем и избранного
-    const favoritesKey = 'natureslegacy:favorites:v1';
-    const userKey = 'natureslegacy:user:v1';
-    
-    const state = {
-      items: [],
-      favorites: [],
-      user: null,
-      filter: { q:'', cat:'', sort:'new', priceMin:0, priceMax:100000, location:'', condition:'' },
-      currentView: 'list',
-      map: null,
-      markers: [],
-      currentTheme: 'dark',
-      editingItem: null,
-      unsubscribe: null // Для отписки от слушателя Firestore
-    };
 
     // === NOTIFICATIONS ===
     function showNotification(message, type = 'success') {
@@ -1434,118 +1587,89 @@
       showNotification(`Тема змінена на ${state.currentTheme === 'dark' ? 'темну' : 'світлу'}`, 'success');
     });
 
-    // === DATA MANAGEMENT ===
-    function load() {
-      try {
-        // Загружаем избранное из localStorage
-        const storedFavorites = localStorage.getItem(favoritesKey);
-        state.favorites = storedFavorites ? JSON.parse(storedFavorites) : [];
-        
-        // Загружаем информацию о пользователе из localStorage
-        const storedUser = localStorage.getItem(userKey);
-        state.user = storedUser ? JSON.parse(storedUser) : null;
-        
-        updateUserUI();
-        
-        // Подписываемся на обновления из Firestore
-        if (state.unsubscribe) {
-          state.unsubscribe(); // Отписываемся от предыдущего слушателя
-        }
-        
-        state.unsubscribe = db.collection("listings")
-          .orderBy("timestamp", "desc")
-          .onSnapshot(snapshot => {
-            state.items = [];
-            snapshot.forEach(doc => {
-              state.items.push({ id: doc.id, ...doc.data() });
-            });
-            render();
-          }, error => {
-            console.error("Error loading listings:", error);
-            showNotification("Помилка завантаження товарів", "error");
-          });
-      } catch (error) {
-        console.error("Error loading data:", error);
-        showNotification("Помилка завантаження даних", "error");
-      }
-    }
-
-    function saveItem(item) {
-      // Если у элемента есть id, обновляем, иначе создаем новый
-      if (item.id) {
-        return db.collection("listings").doc(item.id).update(item)
-          .then(() => {
-            showNotification('Товар оновлено!', 'success');
-            return item.id;
-          })
-          .catch(error => {
-            console.error("Error updating item:", error);
-            showNotification("Помилка оновлення товару", "error");
-            throw error;
-          });
-      } else {
-        // Генерируем id на стороне клиента для immediate feedback
-        const newId = generateId();
-        item.id = newId;
-        item.timestamp = firebase.firestore.FieldValue.serverTimestamp();
-        
-        return db.collection("listings").doc(newId).set(item)
-          .then(() => {
-            showNotification('Товар успішно додано!', 'success');
-            return newId;
-          })
-          .catch(error => {
-            console.error("Error adding item:", error);
-            showNotification("Помилка додавання товару", "error");
-            throw error;
-          });
-      }
-    }
-
-    function deleteItem(id) {
-      return db.collection("listings").doc(id).delete()
-        .then(() => {
-          showNotification('Товар видалено!', 'success');
-        })
-        .catch(error => {
-          console.error("Error deleting item:", error);
-          showNotification("Помилка видалення товару", "error");
-          throw error;
-        });
-    }
-
-    function generateId() {
-      return 'id-' + Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
-    }
-
-    function createPlaceholder(emoji) {
-      const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 200'>
-        <defs>
-          <linearGradient id='bg' x1='0%' y1='0%' x2='100%' y2='100%'>
-            <stop offset='0%' style='stop-color:#1a2f36'/>
-            <stop offset='100%' style='stop-color:#0d1f23'/>
-          </linearGradient>
-        </defs>
-        <rect width='100%' height='100%' fill='url(#bg)'/>
-        <text x='50%' y='50%' text-anchor='middle' dominant-baseline='middle' font-size='72' fill='white' opacity='0.8'>${emoji}</text>
-      </svg>`;
-      return `data:image/svg+xml,${encodeURIComponent(svg)}`;
-    }
-
     // === USER MANAGEMENT ===
     function updateUserUI() {
-      const authBtn = $('#showAuth');
-      const favoritesBtn = $('#showFavorites');
+      const userName = $('#userName');
+      const userAvatar = $('#userAvatar');
+      const dropdownUserName = $('#dropdownUserName');
+      const dropdownUserEmail = $('#dropdownUserEmail');
+      const dropdownAvatar = $('#dropdownAvatar');
+      const loginBtn = $('#loginBtn');
       const logoutBtn = $('#logoutBtn');
       
       if (state.user) {
-        authBtn.innerHTML = `<i class="fas fa-user"></i> ${state.user.displayName || state.user.email}`;
-        favoritesBtn.style.display = 'block';
-        if (logoutBtn) logoutBtn.style.display = 'block';
+        userName.textContent = state.user.displayName || state.user.email.split('@')[0];
+        userAvatar.textContent = state.user.displayName ? state.user.displayName.charAt(0).toUpperCase() : state.user.email.charAt(0).toUpperCase();
+        dropdownUserName.textContent = state.user.displayName || state.user.email;
+        dropdownUserEmail.textContent = state.user.email;
+        dropdownAvatar.textContent = state.user.displayName ? state.user.displayName.charAt(0).toUpperCase() : state.user.email.charAt(0).toUpperCase();
+        
+        loginBtn.style.display = 'none';
+        logoutBtn.style.display = 'block';
       } else {
-        authBtn.innerHTML = '<i class="fas fa-user"></i> Увійти';
-        favoritesBtn.style.display = 'none';
-        if (logoutBtn) logoutBtn.style.display = 'none';
+        userName.textContent = 'Увійти';
+        userAvatar.textContent = '👤';
+        dropdownUserName.textContent = 'Гість';
+        dropdownUserEmail.textContent = '';
+        dropdownAvatar.textContent = '👤';
+        
+        loginBtn.style.display = 'block';
+        logoutBtn.style.display = 'none';
+      }
+    }
+
+    async function loadUserProfile() {
+      if (!state.user) return;
+      
+      try {
+        const doc = await db.collection("users").doc(state.user.uid).get();
+        if (doc.exists) {
+          state.userProfile = doc.data();
+          // Заповнюємо форму профілю, якщо вона відкрита
+          if ($('#profileModal').open) {
+            $('#profileName').value = state.userProfile.name || '';
+            $('#profileEmail').value = state.user.email;
+            $('#profilePhone').value = state.userProfile.phone || '';
+            $('#profileLocation').value = state.userProfile.location || '';
+          }
+        } else {
+          // Створюємо профіль, якщо його немає
+          state.userProfile = {
+            name: state.user.displayName || '',
+            phone: '',
+            location: '',
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          };
+          await db.collection("users").doc(state.user.uid).set(state.userProfile);
+        }
+      } catch (error) {
+        console.error("Error loading user profile:", error);
+        showNotification("Помилка завантаження профілю", "error");
+      }
+    }
+
+    async function saveUserProfile() {
+      if (!state.user) return;
+      
+      try {
+        const profileData = {
+          name: $('#profileName').value,
+          phone: $('#profilePhone').value,
+          location: $('#profileLocation').value,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        
+        await db.collection("users").doc(state.user.uid).set(profileData, { merge: true });
+        state.userProfile = { ...state.userProfile, ...profileData };
+        
+        // Оновлюємо інтерфейс користувача
+        updateUserUI();
+        
+        showNotification('Профіль оновлено', 'success');
+        $('#profileModal').close();
+      } catch (error) {
+        console.error("Error saving profile:", error);
+        showNotification("Помилка збереження профілю", "error");
       }
     }
 
@@ -1576,6 +1700,239 @@
       $('#search').value = '';
       render();
       showNotification('Показано обрані товари', 'success');
+    }
+
+    // === ITEM MANAGEMENT ===
+    async function loadUserItems() {
+      if (!state.user) {
+        showNotification('Будь ласка, увійдіть в систему', 'error');
+        return;
+      }
+      
+      try {
+        const snapshot = await db.collection("listings")
+          .where("user.uid", "==", state.user.uid)
+          .orderBy("timestamp", "desc")
+          .get();
+        
+        state.userItems = [];
+        snapshot.forEach(doc => {
+          state.userItems.push({ id: doc.id, ...doc.data() });
+        });
+        
+        renderUserItems();
+      } catch (error) {
+        console.error("Error loading user items:", error);
+        showNotification("Помилка завантаження ваших товарів", "error");
+      }
+    }
+
+    function renderUserItems() {
+      const container = $('#userItemsList');
+      container.innerHTML = '';
+      
+      if (state.userItems.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 40px; grid-column: 1 / -1;">
+            <i class="fas fa-inbox" style="font-size: 48px; color: var(--muted); margin-bottom: 16px;"></i>
+            <h3>Немає доданих товарів</h3>
+            <p>Додайте свій перший товар</p>
+          </div>
+        `;
+        return;
+      }
+      
+      state.userItems.forEach(item => {
+        const card = renderUserItemCard(item);
+        container.appendChild(card);
+      });
+    }
+
+    function renderUserItemCard(item) {
+      const card = document.createElement('article');
+      card.className = 'card' + (item.vip ? ' vip' : '');
+      card.dataset.id = item.id;
+      
+      const date = item.timestamp ? item.timestamp.toDate() : new Date();
+      const now = new Date();
+      const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+      let timeAgo;
+      
+      if (diffDays === 0) timeAgo = 'сьогодні';
+      else if (diffDays === 1) timeAgo = 'вчора';
+      else if (diffDays < 7) timeAgo = `${diffDays} днів тому`;
+      else timeAgo = date.toLocaleDateString('uk-UA');
+      
+      card.innerHTML = `
+        <img src="${item.image}" alt="${item.title}" class="thumb">
+        <div class="body">
+          <div class="card-header">
+            <h3>${item.title}</h3>
+            <div class="price">${item.negotiable ? 'Договірна' : item.price + ' грн'}</div>
+          </div>
+          <div class="location-time">
+            <i class="fas fa-map-marker-alt"></i> ${item.location} • <i class="fas fa-clock"></i> ${timeAgo}
+          </div>
+          <p>${item.description.length > 100 ? item.description.substring(0, 100) + '...' : item.description}</p>
+          <div class="item-status ${item.active !== false ? 'active' : ''}">
+            ${item.active !== false ? 'Активний' : 'Неактивний'}
+          </div>
+          <div class="edit-actions">
+            <button class="btn btn-ghost edit-btn"><i class="fas fa-edit"></i> Редагувати</button>
+            <button class="btn btn-danger delete-btn"><i class="fas fa-trash"></i> Видалити</button>
+          </div>
+        </div>
+      `;
+      
+      // Додаємо обробники подій
+      card.querySelector('.edit-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        openEditForm(item);
+      });
+      
+      card.querySelector('.delete-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteUserItem(item.id);
+      });
+      
+      card.addEventListener('click', (e) => {
+        if (!e.target.closest('.edit-actions')) {
+          showItem(item.id);
+        }
+      });
+      
+      return card;
+    }
+
+    function openEditForm(item) {
+      // Заповнюємо форму даними товару
+      $('#title').value = item.title;
+      $('#categoryField').value = item.category;
+      $('#price').value = item.price;
+      $('#location').value = item.location;
+      $('#phone').value = item.phone || '';
+      $('#email').value = item.email || (state.user ? state.user.email : '');
+      $('#desc').value = item.description;
+      $('#vip').checked = item.vip || false;
+      $('#negotiable').checked = item.negotiable || false;
+      $('#ecoFriendly').checked = item.ecoFriendly || false;
+      
+      // Встановлюємо зображення
+      $('#preview').src = item.image;
+      $('#preview').hidden = false;
+      $('#uploadText').hidden = true;
+      $('#uploadActions').hidden = false;
+      $('#imageUpload').classList.add('has-image');
+      
+      // Встановлюємо ID товару для редагування
+      state.editingItem = item.id;
+      
+      // Змінюємо заголовок модального вікна
+      $('#addModalTitle').textContent = 'Редагувати товар';
+      
+      // Відкриваємо модальне вікно
+      $('#addModal').showModal();
+      $('#myItemsModal').close();
+    }
+
+    async function deleteUserItem(id) {
+      if (!confirm('Ви впевнені, що хочете видалити цей товар?')) return;
+      
+      try {
+        await db.collection("listings").doc(id).delete();
+        showNotification('Товар видалено', 'success');
+        
+        // Оновлюємо список товарів
+        loadUserItems();
+        
+        // Оновлюємо головний список
+        load();
+      } catch (error) {
+        console.error("Error deleting item:", error);
+        showNotification("Помилка видалення товару", "error");
+      }
+    }
+
+    // === DATA MANAGEMENT ===
+    function load() {
+      try {
+        // Загружаем избранное из localStorage
+        const storedFavorites = localStorage.getItem(favoritesKey);
+        state.favorites = storedFavorites ? JSON.parse(storedFavorites) : [];
+        
+        // Загружаем информацию о пользователе из localStorage
+        const storedUser = localStorage.getItem(userKey);
+        state.user = storedUser ? JSON.parse(storedUser) : null;
+        
+        updateUserUI();
+        
+        // Подписываемся на обновления из Firestore
+        if (state.unsubscribe) {
+          state.unsubscribe(); // Отписываемся от предыдущего слушателя
+        }
+        
+        state.unsubscribe = db.collection("listings")
+          .where("active", "!=", false)
+          .orderBy("active")
+          .orderBy("timestamp", "desc")
+          .onSnapshot(snapshot => {
+            state.items = [];
+            snapshot.forEach(doc => {
+              state.items.push({ id: doc.id, ...doc.data() });
+            });
+            render();
+          }, error => {
+            console.error("Error loading listings:", error);
+            showNotification("Помилка завантаження товарів", "error");
+          });
+      } catch (error) {
+        console.error("Error loading data:", error);
+        showNotification("Помилка завантаження даних", "error");
+      }
+    }
+
+    async function saveItem(item) {
+      try {
+        if (item.id) {
+          // Оновлюємо існуючий товар
+          const { id, ...updateData } = item;
+          await db.collection("listings").doc(item.id).update(updateData);
+          showNotification('Товар оновлено!', 'success');
+          return item.id;
+        } else {
+          // Створюємо новий товар
+          const newId = generateId();
+          item.id = newId;
+          item.timestamp = firebase.firestore.FieldValue.serverTimestamp();
+          item.active = true;
+          
+          await db.collection("listings").doc(newId).set(item);
+          showNotification('Товар успішно додано!', 'success');
+          return newId;
+        }
+      } catch (error) {
+        console.error("Error saving item:", error);
+        showNotification("Помилка збереження товару", "error");
+        throw error;
+      }
+    }
+
+    function generateId() {
+      return 'id-' + Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
+    }
+
+    function createPlaceholder(emoji) {
+      const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 200'>
+        <defs>
+          <linearGradient id='bg' x1='0%' y1='0%' x2='100%' y2='100%'>
+            <stop offset='0%' style='stop-color:#1a2f36'/>
+            <stop offset='100%' style='stop-color:#0d1f23'/>
+          </linearGradient>
+        </defs>
+        <rect width='100%' height='100%' fill='url(#bg)'/>
+        <text x='50%' y='50%' text-anchor='middle' dominant-baseline='middle' font-size='72' fill='white' opacity='0.8'>${emoji}</text>
+      </svg>`;
+      return `data:image/svg+xml,${encodeURIComponent(svg)}`;
     }
 
     // === MAP FUNCTIONALITY ===
@@ -1627,6 +1984,9 @@
       const item = state.items.find(i => i.id === id);
       if (!item) return;
       
+      // Зберігаємо поточний товар
+      state.currentItem = item;
+      
       // Update views count
       const newViews = (item.views || 0) + 1;
       db.collection("listings").doc(item.id).update({
@@ -1640,7 +2000,6 @@
       $('#detailTitle').textContent = item.title;
       $('#detailTitleShort').textContent = item.title.length > 20 ? item.title.substring(0, 20) + '...' : item.title;
       $('#detailDescription').textContent = item.description;
-      $('#detailCategory').textContent = item.category;
       $('#detailCategoryName').textContent = item.category;
       $('#detailLocation').textContent = item.location;
       $('#detailPrice').textContent = item.negotiable ? 'Договірна ціна' : `${item.price} грн`;
@@ -1855,6 +2214,22 @@
         }, 3000);
       });
       
+      const messageBtn = card.querySelector('.btn-primary');
+      messageBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!state.user) {
+          showNotification('Будь ласка, увійдіть в систему', 'error');
+          $('#authModal').showModal();
+          return;
+        }
+        
+        if (item.email) {
+          window.open(`mailto:${item.email}?subject=Запит щодо товару: ${item.title}`, '_blank');
+        } else {
+          showNotification('У цього товару не вказаний email', 'error');
+        }
+      });
+      
       card.addEventListener('click', () => {
         showItem(item.id);
       });
@@ -1865,7 +2240,7 @@
     // === INITIALIZATION ===
     function init() {
       // Set up auth state listener
-      auth.onAuthStateChanged((user) => {
+      auth.onAuthStateChanged(async (user) => {
         if (user) {
           state.user = user;
           localStorage.setItem(userKey, JSON.stringify({
@@ -1873,8 +2248,12 @@
             email: user.email,
             displayName: user.displayName
           }));
+          
+          // Завантажуємо профіль користувача
+          await loadUserProfile();
         } else {
           state.user = null;
+          state.userProfile = null;
           localStorage.removeItem(userKey);
         }
         updateUserUI();
@@ -1903,8 +2282,59 @@
         $('#addModal').close();
       });
       
-      $('#showAuth').addEventListener('click', () => {
+      $('#profileButton').addEventListener('click', () => {
+        $('#profileDropdown').classList.toggle('show');
+      });
+      
+      // Закриття dropdown при кліку поза ним
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.profile-menu')) {
+          $('#profileDropdown').classList.remove('show');
+        }
+      });
+      
+      // Мої товари
+      $('#myItemsLink').addEventListener('click', (e) => {
+        e.preventDefault();
+        $('#profileDropdown').classList.remove('show');
+        loadUserItems();
+        $('#myItemsModal').showModal();
+      });
+      
+      // Налаштування профілю
+      $('#profileSettings').addEventListener('click', (e) => {
+        e.preventDefault();
+        $('#profileDropdown').classList.remove('show');
+        
+        // Заповнюємо форму профілю даними
+        if (state.userProfile) {
+          $('#profileName').value = state.userProfile.name || '';
+          $('#profileEmail').value = state.user.email;
+          $('#profilePhone').value = state.userProfile.phone || '';
+          $('#profileLocation').value = state.userProfile.location || '';
+        }
+        
+        $('#profileModal').showModal();
+      });
+      
+      // Увійти
+      $('#loginBtn').addEventListener('click', (e) => {
+        e.preventDefault();
+        $('#profileDropdown').classList.remove('show');
         $('#authModal').showModal();
+      });
+      
+      // Вийти
+      $('#logoutBtn').addEventListener('click', async (e) => {
+        e.preventDefault();
+        try {
+          await auth.signOut();
+          $('#profileDropdown').classList.remove('show');
+          showNotification('Ви вийшли з системи', 'success');
+        } catch (error) {
+          console.error("Error signing out:", error);
+          showNotification("Помилка виходу з системи", "error");
+        }
       });
       
       $('#closeAuth').addEventListener('click', () => {
@@ -1913,6 +2343,23 @@
       
       $('#closeDetails').addEventListener('click', () => {
         $('#detailsModal').close();
+      });
+      
+      // Закриття профілю
+      $('#closeProfile').addEventListener('click', () => {
+        $('#profileModal').close();
+      });
+      
+      $('#cancelProfile').addEventListener('click', () => {
+        $('#profileModal').close();
+      });
+      
+      // Збереження профілю
+      $('#saveProfile').addEventListener('click', saveUserProfile);
+      
+      // Закриття моїх товарів
+      $('#closeMyItems').addEventListener('click', () => {
+        $('#myItemsModal').close();
       });
       
       $('#showFavorites').addEventListener('click', showFavorites);
@@ -2062,6 +2509,20 @@
         submitBtn.disabled = true;
         
         try {
+          let imageUrl;
+          
+          // Якщо вибрано нове зображення, завантажуємо його
+          if ($('#image').files.length > 0) {
+            imageUrl = await uploadImage($('#image').files[0]);
+          } else if (state.editingItem) {
+            // Якщо редагуємо товар, використовуємо існуюче зображення
+            const existingItem = state.items.find(item => item.id === state.editingItem) || 
+                               state.userItems.find(item => item.id === state.editingItem);
+            imageUrl = existingItem ? existingItem.image : createPlaceholder('🌿');
+          } else {
+            imageUrl = createPlaceholder('🌿');
+          }
+          
           const newItem = {
             title: $('#title').value,
             category: $('#categoryField').value,
@@ -2073,14 +2534,19 @@
             vip: $('#vip').checked,
             negotiable: $('#negotiable').checked,
             ecoFriendly: $('#ecoFriendly').checked,
-            image: $('#preview').src || createPlaceholder('🌿'),
-            views: 0,
+            image: imageUrl,
+            views: state.editingItem ? (state.items.find(item => item.id === state.editingItem)?.views || 0) : 0,
             user: {
               uid: state.user ? state.user.uid : 'anonymous',
               name: state.user ? (state.user.displayName || state.user.email) : "Анонімний користувач",
               email: state.user ? state.user.email : null
             }
           };
+          
+          // Якщо редагуємо товар, додаємо ID
+          if (state.editingItem) {
+            newItem.id = state.editingItem;
+          }
           
           await saveItem(newItem);
           
@@ -2093,6 +2559,10 @@
           $('#uploadText').hidden = false;
           $('#uploadActions').hidden = true;
           $('#imageUpload').classList.remove('has-image');
+          
+          // Скидаємо стан редагування
+          state.editingItem = null;
+          $('#addModalTitle').textContent = 'Додати еко-товар';
         } catch (error) {
           console.error("Error saving item:", error);
         } finally {
@@ -2101,6 +2571,7 @@
         }
       });
       
+      // Скидання форми додавання товару
       $('#resetForm').addEventListener('click', () => {
         $('#addForm').reset();
         $('#preview').src = '';
@@ -2108,6 +2579,15 @@
         $('#uploadText').hidden = false;
         $('#uploadActions').hidden = true;
         $('#imageUpload').classList.remove('has-image');
+        state.editingItem = null;
+        $('#addModalTitle').textContent = 'Додати еко-товар';
+      });
+      
+      // Закриття модального вікна додавання
+      $('#addModal').addEventListener('close', () => {
+        // Скидаємо стан редагування
+        state.editingItem = null;
+        $('#addModalTitle').textContent = 'Додати еко-товар';
       });
       
       // Auth forms
@@ -2167,16 +2647,37 @@
       
       // Detail favorite button
       $('#detailFavorite').addEventListener('click', () => {
-        // Get current item from modal
-        const activeCard = $('.card.highlight');
-        if (activeCard) {
-          const id = activeCard.dataset.id;
-          toggleFavorite(id);
+        if (state.currentItem) {
+          toggleFavorite(state.currentItem.id);
           
-          const isFavorite = state.favorites.includes(id);
+          const isFavorite = state.favorites.includes(state.currentItem.id);
           $('#detailFavorite').innerHTML = isFavorite ? 
             '<i class="fas fa-heart"></i> В обраному' : 
             '<i class="far fa-heart"></i> В обране';
+        }
+      });
+      
+      // Detail message button
+      $('#detailMessage').addEventListener('click', () => {
+        if (!state.user) {
+          showNotification('Будь ласка, увійдіть в систему', 'error');
+          $('#authModal').showModal();
+          return;
+        }
+        
+        if (state.currentItem && state.currentItem.email) {
+          window.open(`mailto:${state.currentItem.email}?subject=Запит щодо товару: ${state.currentItem.title}`, '_blank');
+        } else {
+          showNotification('У цього товару не вказаний email', 'error');
+        }
+      });
+      
+      // Detail phone button
+      $('#detailPhone').addEventListener('click', () => {
+        if (state.currentItem && state.currentItem.phone) {
+          window.open(`tel:${state.currentItem.phone}`, '_self');
+        } else {
+          showNotification('У цього товару не вказаний телефон', 'error');
         }
       });
     }
