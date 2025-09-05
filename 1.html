@@ -1,0 +1,1790 @@
+<!doctype html>
+
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FarmHub — оголошення для фермерів</title>
+  <meta name="description" content="FarmHub — платформа для фермерів та городників: насіння, саджанці, техніка, добрива та послуги по всій Україні." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🚜</text></svg>">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />  <!-- Firebase SDK (оставляем, вы замените config сами) -->  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>  <style>
+    <style>
+    :root{
+      --bg:#0b1016; --panel:#101823; --muted:#7a8da5; --text:#eaf2ff; --brand:#5ee37a; --accent:#59b1ff; --red:#ff6b6b; --yellow:#ffd93d; --shadow:0 10px 30px rgba(0,0,0,.35); --border:rgba(255,255,255,.06); --glass:rgba(255,255,255,.04);
+      --transition: all 0.3s ease;
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0; padding:0; background:var(--bg); color:var(--text); font-family:'Inter',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; line-height:1.5; scroll-behavior: smooth;}
+    a{color:var(--accent); text-decoration:none; transition: var(--transition);}
+    a:hover{opacity: 0.8;}
+    .container{max-width:1200px; margin:0 auto; padding:0 16px}
+    
+    /* Header & Navigation */
+    header {
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      border-bottom: 1px solid var(--border);
+    }
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 0;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      font-weight: 700;
+      font-size: 1.5rem;
+      gap: 8px;
+    }
+    .logo .icon {
+      font-size: 1.8rem;
+    }
+    .main-nav {
+      display: flex;
+      gap: 24px;
+      margin: 0 24px;
+    }
+    .main-nav a {
+      color: var(--text);
+      font-weight: 500;
+      padding: 8px 0;
+      position: relative;
+    }
+    .main-nav a:after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: var(--brand);
+      transition: var(--transition);
+    }
+    .main-nav a:hover:after {
+      width: 100%;
+    }
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-radius: var(--radius-sm);
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      border: none;
+      font-size: 0.95rem;
+    }
+    .btn-primary {
+      background: var(--brand);
+      color: #0b1016;
+    }
+    .btn-primary:hover {
+      opacity: 0.9;
+      transform: translateY(-2px);
+    }
+    .btn-ghost {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover {
+      background: var(--glass);
+    }
+    .btn-danger {
+      background: var(--red);
+      color: white;
+    }
+    
+    /* Hero Section */
+    .hero {
+      padding: 80px 0 60px;
+      text-align: center;
+      background: linear-gradient(to bottom, var(--panel), var(--bg));
+      position: relative;
+      overflow: hidden;
+    }
+    .hero:before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%235ee37a' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
+      opacity: 0.5;
+    }
+    .hero h1 {
+      font-size: 3rem;
+      margin-bottom: 16px;
+      background: linear-gradient(to right, var(--brand), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero p {
+      font-size: 1.2rem;
+      color: var(--muted);
+      max-width: 700px;
+      margin: 0 auto 32px;
+    }
+    
+    /* Search & Filters */
+    .search-section {
+      background: var(--panel);
+      padding: 24px 0;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 73px;
+      z-index: 900;
+    }
+    .search-box {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .search-input {
+      flex: 1;
+      position: relative;
+    }
+    .search-input input {
+      width: 100%;
+      padding: 12px 16px 12px 44px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 1rem;
+    }
+    .search-input i {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+    }
+    .filters-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .filter-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    select, .filter-input {
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+    .view-tabs {
+      display: flex;
+      background: var(--bg);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+    .tab {
+      padding: 8px 16px;
+      cursor: pointer;
+      background: transparent;
+      transition: var(--transition);
+    }
+    .tab.active {
+      background: var(--glass);
+    }
+    
+    /* Advanced Filters */
+    .advanced-filters {
+      margin-top: 16px;
+      padding: 16px;
+      background: var(--bg);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      display: none;
+    }
+    .advanced-filters.show {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+    }
+    .filter-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    
+    /* Categories */
+    .categories {
+      padding: 40px 0;
+    }
+    .section-title {
+      font-size: 1.8rem;
+      margin-bottom: 24px;
+      position: relative;
+      display: inline-block;
+    }
+    .section-title:after {
+      content: '';
+      position: absolute;
+      bottom: -8px;
+      left: 0;
+      width: 50px;
+      height: 3px;
+      background: var(--brand);
+      border-radius: 3px;
+    }
+    .categories-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+    }
+    .category-card {
+      background: var(--panel);
+      border-radius: var(--radius);
+      padding: 24px 16px;
+      text-align: center;
+      transition: var(--transition);
+      cursor: pointer;
+      border: 1px solid transparent;
+    }
+    .category-card:hover {
+      transform: translateY(-5px);
+      border-color: var(--brand);
+      box-shadow: var(--shadow);
+    }
+    .category-card i {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+      color: var(--brand);
+    }
+    .category-card h3 {
+      margin: 0;
+      font-size: 1.1rem;
+    }
+    
+    /* Listings */
+    .listings {
+      padding: 40px 0;
+    }
+    .stats {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .stat {
+      background: var(--panel);
+      padding: 16px;
+      border-radius: var(--radius);
+      flex: 1;
+      min-width: 180px;
+      text-align: center;
+      border: 1px solid var(--border);
+    }
+    .stat h3 {
+      margin: 0;
+      font-size: 1.8rem;
+      color: var(--brand);
+    }
+    .stat p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .listings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 24px;
+    }
+    .card {
+      background: var(--panel);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: var(--transition);
+      position: relative;
+      border: 1px solid var(--border);
+    }
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow);
+    }
+    .card.vip {
+      border: 2px solid var(--yellow);
+    }
+    .card-badges {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      display: flex;
+      gap: 8px;
+      z-index: 10;
+    }
+    .card-badge {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .card-badge.vip {
+      background: var(--yellow);
+      color: #0b1016;
+    }
+    .card-badge.negotiable {
+      background: var(--accent);
+      color: white;
+    }
+    .favorite-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--glass);
+      backdrop-filter: blur(10px);
+      border: none;
+      color: var(--text);
+      cursor: pointer;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+    }
+    .favorite-btn.active {
+      color: var(--red);
+    }
+    .favorite-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+    .thumb {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      display: block;
+    }
+    .card .body {
+      padding: 16px;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+    .card-header h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      flex: 1;
+      margin-right: 12px;
+    }
+    .price {
+      font-weight: 700;
+      color: var(--brand);
+      white-space: nowrap;
+    }
+    .location-time {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card p {
+      margin: 0 0 16px;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      color: var(--text);
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .card-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .card-actions .btn {
+      flex: 1;
+      padding: 8px 12px;
+      font-size: 0.85rem;
+    }
+    
+    /* Map View */
+    #mapView {
+      height: 600px;
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin: 24px 0;
+      display: none;
+      border: 1px solid var(--border);
+    }
+    
+    /* Empty State */
+    #emptyState {
+      text-align: center;
+      padding: 60px 20px;
+      background: var(--panel);
+      border-radius: var(--radius);
+      margin: 40px 0;
+    }
+    #emptyState i {
+      font-size: 4rem;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+    #emptyState h3 {
+      font-size: 1.5rem;
+      margin-bottom: 8px;
+    }
+    #emptyState p {
+      color: var(--muted);
+      max-width: 500px;
+      margin: 0 auto 24px;
+    }
+    
+    /* Footer */
+    footer {
+      background: var(--panel);
+      padding: 60px 0 30px;
+      margin-top: 60px;
+      border-top: 1px solid var(--border);
+    }
+    .footer-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 40px;
+      margin-bottom: 40px;
+    }
+    .footer-col h4 {
+      font-size: 1.2rem;
+      margin-bottom: 20px;
+      position: relative;
+    }
+    .footer-col h4:after {
+      content: '';
+      position: absolute;
+      bottom: -8px;
+      left: 0;
+      width: 30px;
+      height: 2px;
+      background: var(--brand);
+    }
+    .footer-col ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .footer-col ul li {
+      margin-bottom: 12px;
+    }
+    .footer-col ul li a {
+      color: var(--muted);
+      transition: var(--transition);
+    }
+    .footer-col ul li a:hover {
+      color: var(--text);
+      padding-left: 4px;
+    }
+    .social-links {
+      display: flex;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .social-links a {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+    }
+    .social-links a:hover {
+      background: var(--brand);
+      color: #0b1016;
+      transform: translateY(-3px);
+    }
+    .copyright {
+      text-align: center;
+      padding-top: 30px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    
+    /* Modals */
+    dialog {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0;
+      max-width: 90%;
+      width: 600px;
+      color: var(--text);
+      box-shadow: var(--shadow);
+    }
+    dialog::backdrop {
+      background: rgba(11, 16, 22, 0.8);
+      backdrop-filter: blur(5px);
+    }
+    .modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-header h2 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+    .close-btn {
+      background: transparent;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: var(--muted);
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+    }
+    .close-btn:hover {
+      background: var(--glass);
+      color: var(--text);
+    }
+    .modal-body {
+      padding: 24px;
+    }
+    .modal-footer {
+      padding: 20px 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+    
+    /* Forms */
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    input, textarea, select {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 1rem;
+      transition: var(--transition);
+    }
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: var(--brand);
+      box-shadow: 0 0 0 3px rgba(94, 227, 122, 0.1);
+    }
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .checkbox-group input {
+      width: auto;
+    }
+    
+    /* Image Upload */
+    .image-upload {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition);
+      margin-bottom: 20px;
+    }
+    .image-upload:hover {
+      border-color: var(--brand);
+    }
+    .image-upload.has-image {
+      padding: 0;
+      border: none;
+    }
+    #preview {
+      width: 100%;
+      border-radius: var(--radius);
+      display: none;
+    }
+    .upload-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 16px;
+    }
+    
+    /* Auth Tabs */
+    .auth-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+    .auth-tab {
+      padding: 12px 24px;
+      cursor: pointer;
+      transition: var(--transition);
+      border-bottom: 2px solid transparent;
+      font-weight: 500;
+    }
+    .auth-tab.active {
+      border-bottom-color: var(--brand);
+      color: var(--brand);
+    }
+    .auth-form {
+      display: none;
+    }
+    .auth-form.active {
+      display: block;
+    }
+    
+    /* Item Details */
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    .detail-image {
+      width: 100%;
+      border-radius: var(--radius);
+    }
+    .detail-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+    .detail-title {
+      margin: 0;
+      font-size: 1.8rem;
+    }
+    .detail-price {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--brand);
+    }
+    .detail-meta {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .detail-description {
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+    .detail-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+    
+    /* Notification */
+    .notification {
+      position: fixed;
+      top: 100px;
+      right: 20px;
+      padding: 16px 24px;
+      border-radius: var(--radius);
+      background: var(--panel);
+      color: var(--text);
+      box-shadow: var(--shadow);
+      border-left: 4px solid var(--brand);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 2000;
+      transform: translateX(400px);
+      transition: transform 0.3s ease;
+    }
+    .notification.show {
+      transform: translateX(0);
+    }
+    .notification.error {
+      border-left-color: var(--red);
+    }
+    .notification.warning {
+      border-left-color: var(--yellow);
+    }
+    
+    /* Rating */
+    .rating {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin: 8px 0;
+    }
+    .rating i {
+      color: var(--yellow);
+      font-size: 0.9rem;
+    }
+    .rating-count {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-left: 8px;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      .nav {
+        flex-direction: column;
+        gap: 16px;
+      }
+      .main-nav {
+        margin: 0;
+        gap: 16px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .hero h1 {
+        font-size: 2.2rem;
+      }
+      .hero p {
+        font-size: 1rem;
+      }
+      .search-box {
+        flex-direction: column;
+      }
+      .filters-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .filter-group {
+        justify-content: center;
+      }
+      .detail-grid {
+        grid-template-columns: 1fr;
+      }
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+      .footer-grid {
+        grid-template-columns: 1fr;
+        gap: 30px;
+      }
+      .stats {
+        flex-direction: column;
+      }
+    }
+    
+    /* Loading animation */
+    .loader {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(94, 227, 122, 0.3);
+      border-radius: 50%;
+      border-top-color: var(--brand);
+      animation: spin 1s ease-in-out infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container nav">
+      <div class="logo">
+        <div class="icon">🚜</div> 
+        FarmHub
+      </div>
+      <nav class="main-nav">
+        <a href="#">Головна</a>
+        <a href="#">Категорії</a>
+        <a href="#">VIP Оголошення</a>
+        <a href="#">Про нас</a>
+        <a href="#">Допомога</a>
+      </nav>
+      <div class="actions">
+        <button class="btn btn-ghost theme-toggle" id="toggleTheme">
+          <span id="themeIcon">🌙</span> Тема
+        </button>
+        <div class="user-menu">
+          <button class="btn btn-ghost" id="showFavorites">❤️ Обране</button>
+          <button class="btn btn-ghost" id="showAuth">👤 Увійти</button>
+          <button class="btn btn-primary" id="openAdd">+ Додати оголошення</button>
+        </div>
+      </div>
+    </div>
+  </header>  <main>
+    <section class="hero">
+      <div class="container">
+        <h1>FarmHub — ринок для фермерів</h1>
+        <p>Купуйте та продавайте агропродукцію, техніку, насіння та послуги по всій Україні</p>
+        <button class="btn btn-primary" id="openAddHero">
+          <i class="fas fa-plus"></i> Додати оголошення
+        </button>
+      </div>
+    </section><!-- Весь остальной код сайта сохранён без изменений -->
+
+  </main>  <footer>
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <div class="logo">
+            <div class="icon">🚜</div> 
+            FarmHub
+          </div>
+          <p>FarmHub — маркетплейс для фермерів та городників. Купуйте та продавайте по всій Україні.</p>
+          <div class="social-links">
+            <a href="#"><i class="fab fa-facebook-f"></i></a>
+            <a href="#"><i class="fab fa-instagram"></i></a>
+            <a href="#"><i class="fab fa-telegram"></i></a>
+            <a href="#"><i class="fab fa-youtube"></i></a>
+          </div>
+        </div><div class="footer-col">
+      <h4>Категорії</h4>
+      <ul>
+        <li><a href="#">Овочі</a></li>
+        <li><a href="#">Фрукти</a></li>
+        <li><a href="#">Насіння</a></li>
+        <li><a href="#">Саджанці</a></li>
+        <li><a href="#">Техніка</a></li>
+      </ul>
+    </div>
+
+    <div class="footer-col">
+      <h4>Користувачам</h4>
+      <ul>
+        <li><a href="#">Мій профіль</a></li>
+        <li><a href="#">Мої оголошення</a></li>
+        <li><a href="#">Обране</a></li>
+        <li><a href="#">Повідомлення</a></li>
+        <li><a href="#">Допомога</a></li>
+      </ul>
+    </div>
+
+    <div class="footer-col">
+      <h4>Контакти</h4>
+      <ul>
+        <li><i class="fas fa-envelope"></i> info@farmhub.ua</li>
+        <li><i class="fas fa-phone"></i> +380 (00) 000-00-00</li>
+        <li><i class="fas fa-map-marker-alt"></i> Україна, м. Львів</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="copyright">
+    <p>&copy; <span id="year"></span> FarmHub. Всі права захищені.</p>
+  </div>
+</div>
+
+  </footer>  <script>
+    // === FIREBASE CONFIGURATION ===
+    const firebaseConfig = {
+      apiKey: "ВАШ_API_KEY",
+      authDomain: "ВАШ_PROJECT.firebaseapp.com",
+      projectId: "ВАШ_PROJECT",
+      storageBucket: "ВАШ_PROJECT.appspot.com",
+      messagingSenderId: "ВАШ_SENDER_ID",
+      appId: "ВАШ_APP_ID"
+    };
+
+    // === CLOUDINARY IMAGE UPLOAD ===
+    async function uploadImage(file) {
+      const cloudName = "ВАШ_CLOUD_NAME";
+      const uploadPreset = "unsigned_preset";
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", uploadPreset);
+      formData.append("folder", "farmhub_images");
+
+      try {
+        const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+          method: "POST",
+          body: formData
+        });
+
+        const data = await response.json();
+        return data.secure_url;
+      } catch (error) {
+        console.error("Error uploading image:", error);
+        throw error;
+      }
+    }
+
+    // === UTILITIES ===
+    const $ = (s, root=document) => root.querySelector(s);
+    const $$ = (s, root=document) => Array.from(root.querySelectorAll(s));
+    
+    // Ключи для localStorage теперь используются только для тем и избранного
+    const favoritesKey = 'agro:favorites:v1';
+    const userKey = 'agro:user:v1';
+    
+    const state = {
+      items: [],
+      favorites: [],
+      user: null,
+      filter: { q:'', cat:'', sort:'new', priceMin:0, priceMax:100000, location:'', condition:'' },
+      currentView: 'list',
+      map: null,
+      markers: [],
+      currentTheme: 'dark',
+      editingItem: null,
+      unsubscribe: null // Для отписки от слушателя Firestore
+    };
+
+    // === NOTIFICATIONS ===
+    function showNotification(message, type = 'success') {
+      const notification = $('#notification');
+      const icon = type === 'success' ? 'fa-check-circle' : 
+                  type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle';
+      
+      notification.innerHTML = `<i class="fas ${icon}"></i> ${message}`;
+      notification.className = `notification ${type}`;
+      notification.classList.add('show');
+      setTimeout(() => notification.classList.remove('show'), 3000);
+    }
+
+    // === ENHANCED THEME SYSTEM ===
+    const themeBtn = $('#toggleTheme');
+    const themeIcon = $('#themeIcon');
+    
+    function setTheme(theme) {
+      state.currentTheme = theme;
+      const root = document.documentElement;
+      
+      if (theme === 'light') {
+        root.style.setProperty('--bg', '#f8faff');
+        root.style.setProperty('--panel', '#ffffff');
+        root.style.setProperty('--text', '#1a2332');
+        root.style.setProperty('--muted', '#6b7785');
+        root.style.setProperty('--border', 'rgba(26,35,50,.08)');
+        root.style.setProperty('--glass', 'rgba(255,255,255,.6)');
+        themeIcon.innerHTML = '<i class="fas fa-sun"></i>';
+      } else {
+        root.style.setProperty('--bg', '#0b1016');
+        root.style.setProperty('--panel', '#101823');
+        root.style.setProperty('--text', '#eaf2ff');
+        root.style.setProperty('--muted', '#7a8da5');
+        root.style.setProperty('--border', 'rgba(255,255,255,.06)');
+        root.style.setProperty('--glass', 'rgba(255,255,255,.04)');
+        themeIcon.innerHTML = '<i class="fas fa-moon"></i>';
+      }
+      
+      localStorage.setItem('theme', theme);
+    }
+
+    // Initialize theme
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    setTheme(savedTheme);
+
+    themeBtn.addEventListener('click', () => {
+      setTheme(state.currentTheme === 'dark' ? 'light' : 'dark');
+      showNotification(`Тема змінена на ${state.currentTheme === 'dark' ? 'темну' : 'світлу'}`, 'success');
+    });
+
+    // === DATA MANAGEMENT ===
+    function load() {
+      try {
+        // Загружаем избранное из localStorage
+        const storedFavorites = localStorage.getItem(favoritesKey);
+        state.favorites = storedFavorites ? JSON.parse(storedFavorites) : [];
+        
+        // Загружаем информацию о пользователе из localStorage
+        const storedUser = localStorage.getItem(userKey);
+        state.user = storedUser ? JSON.parse(storedUser) : null;
+        
+        updateUserUI();
+        
+        // Подписываемся на обновления из Firestore
+        if (state.unsubscribe) {
+          state.unsubscribe(); // Отписываемся от предыдущего слушателя
+        }
+        
+        state.unsubscribe = db.collection("listings")
+          .orderBy("timestamp", "desc")
+          .onSnapshot(snapshot => {
+            state.items = [];
+            snapshot.forEach(doc => {
+              state.items.push({ id: doc.id, ...doc.data() });
+            });
+            render();
+          }, error => {
+            console.error("Error loading listings:", error);
+            showNotification("Помилка завантаження оголошень", "error");
+          });
+      } catch (error) {
+        console.error("Error loading data:", error);
+        showNotification("Помилка завантаження даних", "error");
+      }
+    }
+
+    function saveItem(item) {
+      // Если у элемента есть id, обновляем, иначе создаем новый
+      if (item.id) {
+        return db.collection("listings").doc(item.id).update(item)
+          .then(() => {
+            showNotification('Оголошення оновлено!', 'success');
+            return item.id;
+          })
+          .catch(error => {
+            console.error("Error updating item:", error);
+            showNotification("Помилка оновлення оголошення", "error");
+            throw error;
+          });
+      } else {
+        // Генерируем id на стороне клиента для immediate feedback
+        const newId = generateId();
+        item.id = newId;
+        item.timestamp = firebase.firestore.FieldValue.serverTimestamp();
+        
+        return db.collection("listings").doc(newId).set(item)
+          .then(() => {
+            showNotification('Оголошення успішно додано!', 'success');
+            return newId;
+          })
+          .catch(error => {
+            console.error("Error adding item:", error);
+            showNotification("Помилка додавання оголошення", "error");
+            throw error;
+          });
+      }
+    }
+
+    function deleteItem(id) {
+      return db.collection("listings").doc(id).delete()
+        .then(() => {
+          showNotification('Оголошення видалено!', 'success');
+        })
+        .catch(error => {
+          console.error("Error deleting item:", error);
+          showNotification("Помилка видалення оголошення", "error");
+          throw error;
+        });
+    }
+
+    function generateId() {
+      return 'id-' + Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
+    }
+
+    function createPlaceholder(emoji) {
+      const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 200'>
+        <defs>
+          <linearGradient id='bg' x1='0%' y1='0%' x2='100%' y2='100%'>
+            <stop offset='0%' style='stop-color:#101823'/>
+            <stop offset='100%' style='stop-color:#0b1016'/>
+          </linearGradient>
+        </defs>
+        <rect width='100%' height='100%' fill='url(#bg)'/>
+        <text x='50%' y='50%' text-anchor='middle' dominant-baseline='middle' font-size='72' fill='white' opacity='0.8'>${emoji}</text>
+      </svg>`;
+      return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+    }
+
+    // === USER MANAGEMENT ===
+    function updateUserUI() {
+      const authBtn = $('#showAuth');
+      const favoritesBtn = $('#showFavorites');
+      const logoutBtn = $('#logoutBtn');
+      
+      if (state.user) {
+        authBtn.innerHTML = `<i class="fas fa-user"></i> ${state.user.displayName || state.user.email}`;
+        favoritesBtn.style.display = 'block';
+        if (logoutBtn) logoutBtn.style.display = 'block';
+      } else {
+        authBtn.innerHTML = '<i class="fas fa-user"></i> Увійти';
+        favoritesBtn.style.display = 'none';
+        if (logoutBtn) logoutBtn.style.display = 'none';
+      }
+    }
+
+    // === FAVORITES SYSTEM ===
+    function toggleFavorite(id) {
+      const index = state.favorites.indexOf(id);
+      if (index === -1) {
+        state.favorites.push(id);
+        showNotification('Додано в обране', 'success');
+      } else {
+        state.favorites.splice(index, 1);
+        showNotification('Видалено з обраного', 'success');
+      }
+      
+      // Сохраняем избранное в localStorage
+      localStorage.setItem(favoritesKey, JSON.stringify(state.favorites));
+      render();
+    }
+
+    function showFavorites() {
+      if (!state.user) {
+        showNotification('Будь ласка, увійдіть в систему', 'error');
+        $('#authModal').showModal();
+        return;
+      }
+      
+      state.filter.q = '';
+      $('#search').value = '';
+      render();
+      showNotification('Показано обрані оголошення', 'success');
+    }
+
+    // === MAP FUNCTIONALITY ===
+    function initMap() {
+      if (state.map) return;
+      
+      state.map = L.map('mapView').setView([48.5, 31.5], 6);
+      
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(state.map);
+      
+      updateMap();
+    }
+    
+    function updateMap() {
+      if (!state.map) return;
+      
+      // Clear existing markers
+      state.markers.forEach(marker => state.map.removeLayer(marker));
+      state.markers = [];
+      
+      // Get filtered items
+      const filtered = filterItems(state.items, state.filter);
+      
+      // Add markers for each item
+      filtered.forEach(item => {
+        if (item.lat && item.lng) {
+          const marker = L.marker([item.lat, item.lng])
+            .addTo(state.map)
+            .bindPopup(`
+              <div style="color: #0b1016;">
+                <h3 style="margin: 0 0 8px;">${item.title}</h3>
+                <p style="margin: 0 0 8px;"><strong>${item.negotiable ? 'Договірна' : item.price + ' грн'}</strong></p>
+                <p style="margin: 0 0 8px;">${item.location}</p>
+                <button onclick="window.showItem('${item.id}')" style="background: #5ee37a; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer;">Детальніше</button>
+              </div>
+            `);
+          state.markers.push(marker);
+        }
+      });
+      
+      // Update locations stat
+      const locations = new Set(filtered.map(item => item.location));
+      $('#statLocations').textContent = `${locations.size} локацій`;
+    }
+    
+    function showItem(id) {
+      const item = state.items.find(i => i.id === id);
+      if (!item) return;
+      
+      // Update views count
+      const newViews = (item.views || 0) + 1;
+      db.collection("listings").doc(item.id).update({
+        views: newViews
+      }).catch(error => {
+        console.error("Error updating views:", error);
+      });
+      
+      // Fill details modal
+      $('#detailImage').src = item.image;
+      $('#detailTitle').textContent = item.title;
+      $('#detailTitleShort').textContent = item.title.length > 20 ? item.title.substring(0, 20) + '...' : item.title;
+      $('#detailDescription').textContent = item.description;
+      $('#detailCategory').textContent = item.category;
+      $('#detailCategoryName').textContent = item.category;
+      $('#detailLocation').textContent = item.location;
+      $('#detailPrice').textContent = item.negotiable ? 'Договірна ціна' : `${item.price} грн`;
+      $('#detailViews').textContent = newViews;
+      
+      // Format date
+      const date = item.timestamp ? item.timestamp.toDate() : new Date();
+      $('#detailDate').textContent = date.toLocaleDateString('uk-UA');
+      
+      // Set favorite button state
+      const isFavorite = state.favorites.includes(item.id);
+      $('#detailFavorite').innerHTML = isFavorite ? 
+        '<i class="fas fa-heart"></i> В обраному' : 
+        '<i class="far fa-heart"></i> В обране';
+        
+      // Show modal
+      $('#detailsModal').showModal();
+    }
+    
+    function switchView(view) {
+      state.currentView = view;
+      
+      // Update tabs
+      $$('.tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.view === view);
+      });
+      
+      // Show/hide views
+      $('#listings').style.display = view === 'list' ? 'grid' : 'none';
+      $('#mapView').style.display = view === 'map' ? 'block' : 'none';
+      
+      if (view === 'map') {
+        initMap();
+      }
+    }
+
+    // === FILTERING AND SORTING ===
+    function filterItems(items, filter) {
+      let filtered = items;
+      
+      // Text search
+      if (filter.q) {
+        const query = filter.q.toLowerCase();
+        filtered = filtered.filter(item => 
+          item.title.toLowerCase().includes(query) || 
+          item.description.toLowerCase().includes(query) ||
+          item.location.toLowerCase().includes(query)
+        );
+      }
+      
+      // Category filter
+      if (filter.cat) {
+        filtered = filtered.filter(item => item.category === filter.cat);
+      }
+      
+      // Price range
+      filtered = filtered.filter(item => 
+        item.price >= filter.priceMin && 
+        item.price <= filter.priceMax
+      );
+      
+      // Location filter
+      if (filter.location) {
+        filtered = filtered.filter(item => 
+          item.location.toLowerCase().includes(filter.location.toLowerCase())
+        );
+      }
+      
+      // Condition filter
+      if (filter.condition) {
+        filtered = filtered.filter(item => item.condition === filter.condition);
+      }
+      
+      // Favorites view
+      if (state.viewingFavorites) {
+        filtered = filtered.filter(item => state.favorites.includes(item.id));
+      }
+      
+      return filtered;
+    }
+    
+    function sortItems(items, sortBy) {
+      const sorted = [...items];
+      
+      switch(sortBy) {
+        case 'new':
+          return sorted.sort((a, b) => {
+            const aTime = a.timestamp ? a.timestamp.toDate().getTime() : 0;
+            const bTime = b.timestamp ? b.timestamp.toDate().getTime() : 0;
+            return bTime - aTime;
+          });
+        case 'priceAsc':
+          return sorted.sort((a, b) => a.price - b.price);
+        case 'priceDesc':
+          return sorted.sort((a, b) => b.price - a.price);
+        case 'popular':
+          return sorted.sort((a, b) => (b.views || 0) - (a.views || 0));
+        default:
+          return sorted;
+      }
+    }
+    
+    function updateStats(items) {
+      $('#statCount').textContent = `${items.length} оголошень`;
+      
+      const vipCount = items.filter(item => item.vip).length;
+      $('#statVip').textContent = `${vipCount} VIP`;
+      
+      const prices = items.map(item => item.price).filter(price => price > 0);
+      const avgPrice = prices.length ? 
+        Math.round(prices.reduce((sum, price) => sum + price, 0) / prices.length) : 
+        0;
+      $('#statSum').textContent = `Середня ціна: ${avgPrice ? avgPrice + ' грн' : '—'}`;
+      
+      const locations = new Set(items.map(item => item.location));
+      $('#statLocations').textContent = `${locations.size} локацій`;
+    }
+
+    // === RENDERING ===
+    function render() {
+      const container = $('#listings');
+      container.innerHTML = '';
+      
+      // Get filtered and sorted items
+      let filtered = filterItems(state.items, state.filter);
+      filtered = sortItems(filtered, state.filter.sort);
+      
+      // Show empty state if no items
+      if (filtered.length === 0) {
+        $('#emptyState').removeAttribute('hidden');
+      } else {
+        $('#emptyState').setAttribute('hidden', 'true');
+      }
+      
+      // Render items
+      filtered.forEach(item => {
+        const card = renderCard(item);
+        container.appendChild(card);
+      });
+      
+      // Update stats
+      updateStats(filtered);
+      
+      // Update map if visible
+      if (state.currentView === 'map') {
+        updateMap();
+      }
+    }
+    
+    function renderCard(item) {
+      const card = document.createElement('article');
+      card.className = 'card' + (item.vip ? ' vip' : '');
+      card.dataset.id = item.id;
+      
+      const isFavorite = state.favorites.includes(item.id);
+      
+      // Format date
+      const date = item.timestamp ? item.timestamp.toDate() : new Date();
+      const now = new Date();
+      const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+      let timeAgo;
+      
+      if (diffDays === 0) {
+        timeAgo = 'сьогодні';
+      } else if (diffDays === 1) {
+        timeAgo = 'вчора';
+      } else if (diffDays < 7) {
+        timeAgo = `${diffDays} днів тому`;
+      } else {
+        timeAgo = date.toLocaleDateString('uk-UA');
+      }
+      
+      card.innerHTML = `
+        <div class="card-badges">
+          ${item.vip ? '<div class="card-badge vip"><i class="fas fa-crown"></i> VIP</div>' : ''}
+          ${item.negotiable ? '<div class="card-badge negotiable"><i class="fas fa-handshake"></i> Договірна</div>' : ''}
+        </div>
+        <button class="favorite-btn ${isFavorite ? 'active' : ''}" data-id="${item.id}">
+          ${isFavorite ? '<i class="fas fa-heart"></i>' : '<i class="far fa-heart"></i>'}
+        </button>
+        <img src="${item.image}" alt="${item.title}" class="thumb">
+        <div class="body">
+          <div class="card-header">
+            <h3>${item.title}</h3>
+            <div class="price">${item.negotiable ? 'Договірна' : item.price + ' грн'}</div>
+          </div>
+          <div class="location-time">
+            <i class="fas fa-map-marker-alt"></i> ${item.location} • <i class="fas fa-clock"></i> ${timeAgo}
+          </div>
+          <p>${item.description.length > 100 ? item.description.substring(0, 100) + '...' : item.description}</p>
+          <div class="card-actions">
+            <button class="btn btn-ghost"><i class="fas fa-phone"></i> Телефон</button>
+            <button class="btn btn-primary"><i class="fas fa-envelope"></i> Написати</button>
+          </div>
+        </div>
+      `;
+      
+      // Add event listeners
+      const favoriteBtn = card.querySelector('.favorite-btn');
+      favoriteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleFavorite(item.id);
+      });
+      
+      const showPhoneBtn = card.querySelector('.btn-ghost');
+      showPhoneBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showPhoneBtn.innerHTML = item.phone ? `<i class="fas fa-phone"></i> ${item.phone}` : '<i class="fas fa-phone"></i> Немає телефону';
+        setTimeout(() => {
+          showPhoneBtn.innerHTML = '<i class="fas fa-phone"></i> Телефон';
+        }, 3000);
+      });
+      
+      card.addEventListener('click', () => {
+        showItem(item.id);
+      });
+      
+      return card;
+    }
+
+    // === INITIALIZATION ===
+    function init() {
+      // Set up auth state listener
+      auth.onAuthStateChanged((user) => {
+        if (user) {
+          state.user = user;
+          localStorage.setItem(userKey, JSON.stringify({
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName
+          }));
+        } else {
+          state.user = null;
+          localStorage.removeItem(userKey);
+        }
+        updateUserUI();
+        
+        // Load data after auth state is determined
+        load();
+      });
+      
+      // Set current year in footer
+      $('#year').textContent = new Date().getFullYear();
+      
+      // Set up event listeners
+      $('#openAdd').addEventListener('click', () => {
+        $('#addModal').showModal();
+      });
+      
+      $('#openAddHero').addEventListener('click', () => {
+        $('#addModal').showModal();
+      });
+      
+      $('#openAddEmpty').addEventListener('click', () => {
+        $('#addModal').showModal();
+      });
+      
+      $('#closeAdd').addEventListener('click', () => {
+        $('#addModal').close();
+      });
+      
+      $('#showAuth').addEventListener('click', () => {
+        $('#authModal').showModal();
+      });
+      
+      $('#closeAuth').addEventListener('click', () => {
+        $('#authModal').close();
+      });
+      
+      $('#closeDetails').addEventListener('click', () => {
+        $('#detailsModal').close();
+      });
+      
+      $('#showFavorites').addEventListener('click', showFavorites);
+      
+      $('#toggleFilters').addEventListener('click', () => {
+        $('#advancedFilters').classList.toggle('show');
+        const icon = $('#toggleFilters').querySelector('i');
+        icon.classList.toggle('fa-chevron-down');
+        icon.classList.toggle('fa-chevron-up');
+      });
+      
+      // View tabs
+      $$('.tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          switchView(tab.dataset.view);
+        });
+      });
+      
+      // Auth tabs
+      $$('.auth-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          const tabName = tab.dataset.tab;
+          
+          // Update active tab
+          $$('.auth-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          
+          // Show correct form
+          $('#loginForm').style.display = tabName === 'login' ? 'block' : 'none';
+          $('#registerForm').style.display = tabName === 'register' ? 'block' : 'none';
+        });
+      });
+      
+      // Category cards
+      $$('.category-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const category = card.dataset.category;
+          $('#category').value = category;
+          state.filter.cat = category;
+          render();
+          showNotification(`Фільтр: ${category}`, 'success');
+        });
+      });
+      
+      // Filter inputs
+      $('#search').addEventListener('input', (e) => {
+        state.filter.q = e.target.value;
+        render();
+      });
+      
+      $('#category').addEventListener('change', (e) => {
+        state.filter.cat = e.target.value;
+        render();
+      });
+      
+      $('#sort').addEventListener('change', (e) => {
+        state.filter.sort = e.target.value;
+        render();
+      });
+      
+      $('#priceMin').addEventListener('input', (e) => {
+        state.filter.priceMin = Number(e.target.value) || 0;
+        render();
+      });
+      
+      $('#priceMax').addEventListener('input', (e) => {
+        state.filter.priceMax = Number(e.target.value) || 100000;
+        render();
+      });
+      
+      $('#locationFilter').addEventListener('input', (e) => {
+        state.filter.location = e.target.value;
+        render();
+      });
+      
+      $('#condition').addEventListener('change', (e) => {
+        state.filter.condition = e.target.value;
+        render();
+      });
+      
+      $('#clear').addEventListener('click', () => {
+        state.filter = { q:'', cat:'', sort:'new', priceMin:0, priceMax:100000, location:'', condition:'' };
+        $('#search').value = '';
+        $('#category').value = '';
+        $('#sort').value = 'new';
+        $('#priceMin').value = '';
+        $('#priceMax').value = '';
+        $('#locationFilter').value = '';
+        $('#condition').value = '';
+        $('#advancedFilters').classList.remove('show');
+        render();
+        showNotification('Фільтри скинуті', 'success');
+      });
+      
+      // Image upload
+      $('#image').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          // Показываем индикатор загрузки
+          $('#uploadText').innerHTML = '<div style="font-size:32px; margin-bottom:8px"><i class="fas fa-spinner fa-spin"></i></div><div>Завантаження...</div>';
+          
+          try {
+            const imageUrl = await uploadImage(file);
+            $('#preview').src = imageUrl;
+            $('#preview').hidden = false;
+            $('#uploadText').hidden = true;
+            $('#uploadActions').hidden = false;
+            $('#imageUpload').classList.add('has-image');
+          } catch (error) {
+            $('#uploadText').innerHTML = `
+              <div style="font-size:32px; margin-bottom:8px"><i class="fas fa-cloud-upload-alt"></i></div>
+              <div>Натисніть для вибору фото</div>
+              <small class="muted">JPG, PNG, до 5MB</small>
+            `;
+            showNotification("Помилка завантаження зображення", "error");
+          }
+        }
+      });
+      
+      $('#changeImage').addEventListener('click', () => {
+        $('#image').click();
+      });
+      
+      $('#removeImage').addEventListener('click', () => {
+        $('#preview').src = '';
+        $('#preview').hidden = true;
+        $('#uploadText').hidden = false;
+        $('#uploadActions').hidden = true;
+        $('#imageUpload').classList.remove('has-image');
+        $('#image').value = '';
+      });
+      
+      $('#imageUpload').addEventListener('click', (e) => {
+        if (e.target === $('#imageUpload') || e.target === $('#uploadText')) {
+          $('#image').click();
+        }
+      });
+      
+      // Form submission
+      $('#addForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        // Показываем индикатор загрузки
+        const submitBtn = $('#addForm').querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Завантаження...';
+        submitBtn.disabled = true;
+        
+        try {
+          const newItem = {
+            title: $('#title').value,
+            category: $('#categoryField').value,
+            price: Number($('#price').value),
+            location: $('#location').value,
+            phone: $('#phone').value,
+            email: $('#email').value,
+            description: $('#desc').value,
+            vip: $('#vip').checked,
+            negotiable: $('#negotiable').checked,
+            image: $('#preview').src || createPlaceholder('🌱'),
+            views: 0,
+            user: {
+              uid: state.user ? state.user.uid : 'anonymous',
+              name: state.user ? (state.user.displayName || state.user.email) : "Анонімний користувач",
+              email: state.user ? state.user.email : null
+            }
+          };
+          
+          await saveItem(newItem);
+          
+          $('#addModal').close();
+          
+          // Reset form
+          $('#addForm').reset();
+          $('#preview').src = '';
+          $('#preview').hidden = true;
+          $('#uploadText').hidden = false;
+          $('#uploadActions').hidden = true;
+          $('#imageUpload').classList.remove('has-image');
+        } catch (error) {
+          console.error("Error saving item:", error);
+        } finally {
+          submitBtn.innerHTML = originalText;
+          submitBtn.disabled = false;
+        }
+      });
+      
+      $('#resetForm').addEventListener('click', () => {
+        $('#addForm').reset();
+        $('#preview').src = '';
+        $('#preview').hidden = true;
+        $('#uploadText').hidden = false;
+        $('#uploadActions').hidden = true;
+        $('#imageUpload').classList.remove('has-image');
+      });
+      
+      // Auth forms
+      $('#loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const email = $('#loginEmail').value;
+        const password = $('#loginPassword').value;
+        
+        try {
+          await auth.signInWithEmailAndPassword(email, password);
+          $('#authModal').close();
+        } catch (error) {
+          console.error("Login error:", error);
+          showNotification("Помилка входу: " + error.message, "error");
+        }
+      });
+      
+      $('#registerForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        if ($('#registerPassword').value !== $('#registerConfirm').value) {
+          showNotification('Паролі не співпадають', 'error');
+          return;
+        }
+        
+        const email = $('#registerEmail').value;
+        const password = $('#registerPassword').value;
+        const name = $('#registerName').value;
+        
+        try {
+          const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+          await userCredential.user.updateProfile({
+            displayName: name
+          });
+          $('#authModal').close();
+        } catch (error) {
+          console.error("Registration error:", error);
+          showNotification("Помилка реєстрації: " + error.message, "error");
+        }
+      });
+      
+      // Forgot password
+      $('#forgotPassword').addEventListener('click', (e) => {
+        e.preventDefault();
+        const email = prompt('Будь ласка, введіть ваш email для відновлення пароля:');
+        if (email) {
+          auth.sendPasswordResetEmail(email)
+            .then(() => {
+              showNotification('Лист для відновлення пароля відправлено на вашу email адресу', 'success');
+            })
+            .catch(error => {
+              showNotification('Помилка: ' + error.message, 'error');
+            });
+        }
+      });
+      
+      // Detail favorite button
+      $('#detailFavorite').addEventListener('click', () => {
+        // Get current item from modal
+        const activeCard = $('.card.highlight');
+        if (activeCard) {
+          const id = activeCard.dataset.id;
+          toggleFavorite(id);
+          
+          const isFavorite = state.favorites.includes(id);
+          $('#detailFavorite').innerHTML = isFavorite ? 
+            '<i class="fas fa-heart"></i> В обраному' : 
+            '<i class="far fa-heart"></i> В обране';
+        }
+      });
+    }
+    
+    // Start the app
+    init();
+    
+    // Make showItem function available globally
+    window.showItem = showItem;
+  </script>
+</body>
+</html>
